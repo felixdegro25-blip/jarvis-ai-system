@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Control Panel - Iron Man Style</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00d4ff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(0deg, transparent 24%, rgba(0, 212, 255, 0.05) 25%, rgba(0, 212, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 212, 255, 0.05) 75%, rgba(0, 212, 255, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 212, 255, 0.05) 25%, rgba(0, 212, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 212, 255, 0.05) 75%, rgba(0, 212, 255, 0.05) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            z-index: -1;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .panel {
+            background: rgba(10, 14, 39, 0.8);
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #39ff14;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #39ff14;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .status-item {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid #00d4ff;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 10px;
+            color: #7dd3fc;
+            text-transform: uppercase;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #39ff14;
+        }
+
+        .gauge {
+            width: 100%;
+            height: 25px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #39ff14);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px #39ff14;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: 2px solid;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-green {
+            color: #39ff14;
+            border-color: #39ff14;
+            box-shadow: 0 0 10px #39ff14;
+        }
+
+        .btn-green:hover {
+            box-shadow: 0 0 20px #39ff14;
+            transform: scale(1.05);
+        }
+
+        .btn-red {
+            color: #ff4444;
+            border-color: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+        }
+
+        .btn-red:hover {
+            box-shadow: 0 0 20px #ff4444;
+            transform: scale(1.05);
+        }
+
+        .btn-blue {
+            color: #00d4ff;
+            border-color: #00d4ff;
+            box-shadow: 0 0 10px #00d4ff;
+        }
+
+        .btn-blue:hover {
+            box-shadow: 0 0 20px #00d4ff;
+            transform: scale(1.05);
+        }
+
+        .btn-full {
+            grid-column: 1 / -1;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #39ff14);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #0a0e27;
+        }
+
+        .hologram {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+
+    <div class="hologram">
+        <canvas id="canvas3d"></canvas>
+    </div>
+
+    <div class="container">
+        <!-- Status Panel -->
+        <div class="panel">
+            <div class="panel-title">⚡ System Status</div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label">CPU</div>
+                    <div class="gauge">
+                        <div class="gauge-fill" id="cpuGauge" style="width: 0%"></div>
+                    </div>
+                    <div class="status-value" id="cpuText">0%</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Memory</div>
+                    <div class="gauge">
+                        <div class="gauge-fill" id="memGauge" style="width: 0%"></div>
+                    </div>
+                    <div class="status-value" id="memText">0%</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">GPU</div>
+                    <div class="gauge">
+                        <div class="gauge-fill" id="gpuGauge" style="width: 0%"></div>
+                    </div>
+                    <div class="status-value" id="gpuText">0%</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Temp</div>
+                    <div class="status-value" id="tempText">32°C</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="panel">
+            <div class="panel-title">🎮 Control Panel</div>
+            <div class="control-grid">
+                <button class="btn btn-green" id="startBtn">▶ Start</button>
+                <button class="btn btn-blue" id="pauseBtn">⏸ Pause</button>
+                <button class="btn btn-blue" id="trainingBtn">🧠 Training</button>
+                <button class="btn btn-blue" id="bgTrainingBtn">🔄 Bg Train</button>
+                <button class="btn btn-red btn-full" id="shutdownBtn">⏹ Shutdown</button>
+            </div>
+        </div>
+
+        <!-- Training Progress -->
+        <div class="panel">
+            <div class="panel-title">📊 Training Progress</div>
+            <div class="info-row">
+                <span>Progress:</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+            </div>
+            <div class="info-row">
+                <span>Epochs:</span>
+                <span id="epochsText">0/100</span>
+            </div>
+            <div class="info-row">
+                <span>Accuracy:</span>
+                <span id="accuracyText">0%</span>
+            </div>
+            <div class="info-row">
+                <span>Loss:</span>
+                <span id="lossText">0.00</span>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="panel">
+            <div class="panel-title">📜 Activity Log</div>
+            <div id="activityLog" style="max-height: 100%; overflow-y: auto; font-size: 11px; color: #7dd3fc;">
+                <div>System initialized...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ CONFIGURATION ============
+        const API_BASE = 'http://localhost:5000/api';
+        const POLL_INTERVAL = 2000;
+
+        // ============ 3D SETUP ============
+        let scene, camera, renderer, cube;
+
+        function init3D() {
+            const container = document.querySelector('.hologram');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+
+            // Cube
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshPhongMaterial({ color: 0x00d4ff, emissive: 0x00d4ff });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            // Edges
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x39ff14 }));
+            cube.add(line);
+
+            // Lighting
+            const light = new THREE.PointLight(0x00d4ff, 1.5);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            camera.position.z = 2;
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            cube.rotation.x += 0.005;
+            cube.rotation.y += 0.01;
+            const pulse = Math.sin(Date.now() * 0.003) * 0.1 + 1;
+            cube.scale.set(pulse, pulse, pulse);
+            renderer.render(scene, camera);
+        }
+
+        // ============ API FUNCTIONS ============
+        async function fetchStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                document.getElementById('cpuGauge').style.width = `${data.cpu}%`;
+                document.getElementById('cpuText').textContent = `${Math.round(data.cpu)}%`;
+                document.getElementById('memGauge').style.width = `${data.memory}%`;
+                document.getElementById('memText').textContent = `${Math.round(data.memory)}%`;
+                document.getElementById('gpuGauge').style.width = `${data.gpu}%`;
+                document.getElementById('gpuText').textContent = `${Math.round(data.gpu)}%`;
+                document.getElementById('tempText').textContent = `${Math.round(data.temperature)}°C`;
+            } catch (error) {
+                console.error('Status error:', error);
+            }
+        }
+
+        async function fetchTraining() {
+            try {
+                const response = await fetch(`${API_BASE}/training`);
+                const data = await response.json();
+                
+                document.getElementById('progressFill').style.width = `${data.progress}%`;
+                document.getElementById('progressFill').textContent = `${data.progress}%`;
+                document.getElementById('progressText').textContent = `${data.progress}%`;
+                document.getElementById('epochsText').textContent = `${data.epochs}/100`;
+                document.getElementById('accuracyText').textContent = `${Math.round(data.accuracy)}%`;
+                document.getElementById('lossText').textContent = `${data.loss.toFixed(4)}`;
+            } catch (error) {
+                console.error('Training error:', error);
+            }
+        }
+
+        async function callAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}/control/${endpoint}`, { method: 'POST' });
+                const data = await response.json();
+                addLog(`✅ ${data.message}`);
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`);
+            }
+        }
+
+        function addLog(message) {
+            const log = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // ============ EVENT LISTENERS ============
+        document.getElementById('startBtn').addEventListener('click', () => callAPI('start'));
+        document.getElementById('pauseBtn').addEventListener('click', () => callAPI('pause'));
+        document.getElementById('trainingBtn').addEventListener('click', () => callAPI('training'));
+        document.getElementById('bgTrainingBtn').addEventListener('click', () => callAPI('training'));
+        document.getElementById('shutdownBtn').addEventListener('click', () => {
+            if (confirm('Shutdown JARVIS?')) {
+                fetch(`${API_BASE}/control/shutdown`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: true })
+                });
+            }
+        });
+
+        // ============ INITIALIZATION ============
+        window.addEventListener('load', () => {
+            init3D();
+            fetchStatus();
+            fetchTraining();
+            setInterval(fetchStatus, POLL_INTERVAL);
+            setInterval(fetchTraining, POLL_INTERVAL);
+            addLog('Dashboard initialized ✅');
+        });
+    </script>
+</body>
+</html>
